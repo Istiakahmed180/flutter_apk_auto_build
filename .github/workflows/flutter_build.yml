@@ -1,0 +1,30 @@
+name: Build Flutter APK and Upload to Google Drive
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.29.0' # তোমার ভার্সন অনুযায়ী
+
+    - name: Install dependencies
+      run: flutter pub get
+
+    - name: Build release APK
+      run: flutter build apk --release
+
+    - name: Upload APK to Google Drive
+      uses: aimanzzz/upload-to-google-drive@v1.0.0
+      with:
+        credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
+        folderId: ${{ secrets.GDRIVE_FOLDER_ID }}
+        filePath: build/app/outputs/flutter-apk/app-release.apk
