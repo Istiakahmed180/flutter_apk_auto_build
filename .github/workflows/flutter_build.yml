@@ -9,22 +9,67 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout Repo
+        uses: actions/checkout@v3
 
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.29.0' # তোমার ভার্সন অনুযায়ী
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
 
-    - name: Install dependencies
-      run: flutter pub get
+      - name: Install dependencies
+        run: flutter pub get
 
-    - name: Build release APK
-      run: flutter build apk --release
+      - name: Build APK
+        run: flutter build apk --release
 
-    - name: Upload APK to Google Drive
-      uses: aimanzzz/upload-to-google-drive@v1.0.0
-      with:
-        credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
-        folderId: ${{ secrets.GDRIVE_FOLDER_ID }}
-        filePath: build/app/outputs/flutter-apk/app-release.apk
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Google APIs client
+        run: npm install -g googleapis
+
+      - name: Create upload.js script
+        run: |
+          echo "const fs = require('fs');
+          const { google } = require('googleapis');
+
+          const auth = new google.auth.GoogleAuth({
+            credentials: JSON.parse(process.env.GDRIVE_CREDENTIALS),
+            scopes: ['https://www.googleapis.com/auth/drive.file'],
+          });
+
+          async function upload() {
+            const drive = google.drive({ version: 'v3', auth: await auth.getClient() });
+
+            const fileMetadata = {
+              name: 'app-release.apk',
+              parents: ['${{ secrets.GDRIVE_FOLDER_ID }}'],
+            };
+
+            const media = {
+              mimeType: 'application/vnd.android.package-archive',
+              body: fs.createReadStream('build/app/outputs/flutter-apk/app-release.apk'),
+            };
+
+            const res = await drive.files.create({
+              requestBody: fileMetadata,
+              media: media,
+              fields: 'id',
+            });
+
+            console.log('File Uploaded. File ID:', res.data.id);
+          }
+
+          upload().catch(err => {
+            console.error(err);
+            process.exit(1);
+          });
+          " > upload.js
+
+      - name: Upload APK to Google Drive
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+        run: node upload.js
