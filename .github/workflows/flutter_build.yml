@@ -15,7 +15,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.0'
+          flutter-version: '3.19.0'
 
       - name: Install dependencies
         run: flutter pub get
@@ -28,8 +28,11 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Google APIs client
-        run: npm install -g googleapis
+      - name: Initialize Node project
+        run: npm init -y
+
+      - name: Install googleapis
+        run: npm install googleapis
 
       - name: Create upload.js script
         run: |
@@ -60,11 +63,11 @@ jobs:
               fields: 'id',
             });
 
-            console.log('File Uploaded. File ID:', res.data.id);
+            console.log('✅ File Uploaded! File ID:', res.data.id);
           }
 
           upload().catch(err => {
-            console.error(err);
+            console.error('❌ Upload Failed:', err);
             process.exit(1);
           });
           " > upload.js
